@@ -33,36 +33,31 @@ val mutex = Mutex()
 
 suspend fun renderLatex(latex: String): ByteArray? {
     return mutex.withLock {
-        try {
-            inputFile.writeText(latexTemplate(latex))
-            withContext(Dispatchers.IO) {
-                val process = ProcessBuilder("lacheck", inputFile.name).apply {
-                    directory(WORK_DIR)
-                    redirectOutput(ProcessBuilder.Redirect.PIPE)
-                    redirectError(ProcessBuilder.Redirect.PIPE)
-                }.start().apply {
-                    waitFor(1, TimeUnit.SECONDS)
-                }
-                if (process.inputStream.bufferedReader().readText().isNotEmpty()) {
-                    return@withContext null
-                }
-                ProcessBuilder(
-                    "pdflatex",
-                    "-shell-escape",
-                    "-interaction=nonstopmode",
-                    "-halt-on-error",
-                    inputFile.name
-                ).apply {
-                    directory(WORK_DIR)
-                    redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                    redirectError(ProcessBuilder.Redirect.DISCARD)
-                }.start().waitFor(3, TimeUnit.SECONDS)
-                outputFile.readBytes()
+        inputFile.writeText(latexTemplate(latex))
+        val success = withContext(Dispatchers.IO) {
+            val check = ProcessBuilder("lacheck", inputFile.name).apply {
+                directory(WORK_DIR)
+                redirectOutput(ProcessBuilder.Redirect.PIPE)
+                redirectError(ProcessBuilder.Redirect.PIPE)
+            }.start()
+            check.waitFor(1, TimeUnit.SECONDS)
+            if (check.inputStream.bufferedReader().readText().isNotEmpty()) {
+                return@withContext false
             }
-        } catch (e: InterruptedException) {
-            null
-        } finally {
-            WORK_DIR.listFiles()?.forEach { it.delete() }
+            ProcessBuilder(
+                "pdflatex",
+                "-shell-escape",
+                "-interaction=nonstopmode",
+                "-halt-on-error",
+                inputFile.name
+            ).apply {
+                directory(WORK_DIR)
+                redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                redirectError(ProcessBuilder.Redirect.DISCARD)
+            }.start().waitFor(3, TimeUnit.SECONDS)
         }
+        val bytes = if (success) outputFile.readBytes() else null
+        WORK_DIR.listFiles()?.forEach { it.delete() }
+        bytes
     }
 }
