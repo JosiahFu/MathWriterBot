@@ -7,11 +7,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
+import kotlin.io.path.createTempDirectory
 
-val WORK_DIR = File("work")
+val WORK_DIR: File = createTempDirectory("MathBot").toFile()
 
-val inputFile: File = Path(WORK_DIR.path, "math.tex").toFile()
-val outputFile: File = Path(WORK_DIR.path, "math.png").toFile()
+val INPUT_FILE: File = Path(WORK_DIR.path, "math.tex").toFile()
+val OUTPUT_FILE: File = Path(WORK_DIR.path, "math.png").toFile()
 
 fun latexTemplate(latex: String) = """
     \documentclass[border=0.50001bp,convert={convertexe={magick},outext=.png}]{standalone}
@@ -33,9 +34,9 @@ val mutex = Mutex()
 
 suspend fun renderLatex(latex: String): ByteArray? {
     return mutex.withLock {
-        inputFile.writeText(latexTemplate(latex))
+        INPUT_FILE.writeText(latexTemplate(latex))
         val success = withContext(Dispatchers.IO) {
-            val check = ProcessBuilder("lacheck", inputFile.name).apply {
+            val check = ProcessBuilder("lacheck", INPUT_FILE.name).apply {
                 directory(WORK_DIR)
                 redirectOutput(ProcessBuilder.Redirect.PIPE)
                 redirectError(ProcessBuilder.Redirect.PIPE)
@@ -49,14 +50,14 @@ suspend fun renderLatex(latex: String): ByteArray? {
                 "-shell-escape",
                 "-interaction=nonstopmode",
                 "-halt-on-error",
-                inputFile.name
+                INPUT_FILE.name
             ).apply {
                 directory(WORK_DIR)
                 redirectOutput(ProcessBuilder.Redirect.DISCARD)
                 redirectError(ProcessBuilder.Redirect.DISCARD)
             }.start().waitFor(3, TimeUnit.SECONDS)
         }
-        val bytes = if (success) outputFile.readBytes() else null
+        val bytes = if (success) OUTPUT_FILE.readBytes() else null
         WORK_DIR.listFiles()?.forEach { it.delete() }
         bytes
     }

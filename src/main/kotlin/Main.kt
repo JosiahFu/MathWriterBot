@@ -17,7 +17,7 @@ import io.ktor.utils.io.*
 
 @OptIn(PrivilegedIntent::class)
 suspend fun main() {
-    WORK_DIR.mkdir()
+    WORK_DIR.deleteOnExit()
     val dotenv = Dotenv.load()
     with (Kord(dotenv["BOT_TOKEN"])) {
         createGlobalChatInputCommand("latex", "Display LaTeX as image") {
