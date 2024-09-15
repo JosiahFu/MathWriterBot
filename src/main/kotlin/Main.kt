@@ -14,6 +14,8 @@ import dev.kord.rest.builder.interaction.string
 import io.github.cdimascio.dotenv.Dotenv
 import io.ktor.client.request.forms.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(PrivilegedIntent::class)
 suspend fun main() {
@@ -34,6 +36,10 @@ suspend fun main() {
                 if (image == null) {
                     message.respond {
                         content = "Error rendering latex"
+                    }
+                    launch {
+                        delay(5000)
+                        message.delete()
                     }
                     return@on
                 }
