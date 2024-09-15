@@ -1,0 +1,28 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+    id 'application'
+}
+
+group = 'archives.tater.bot.mathwriter'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    implementation "dev.kord:kord-core:${project.kord_version}"
+    implementation "io.github.cdimascio:dotenv-kotlin:${project.kdotenv_version}"
+}
+
+test {
+    useJUnitPlatform()
+}
+kotlin {
+    jvmToolchain(21)
+}
+
+application {
+    mainClass = 'archives.tater.bot.mathwriter.Main'
+}
