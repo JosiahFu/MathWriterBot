@@ -13,10 +13,11 @@ val WORK_DIR: File = createTempDirectory("MathBot").toFile().apply {
 }
 
 val INPUT_FILE: File = Path(WORK_DIR.path, "math.tex").toFile()
-val OUTPUT_FILE: File = Path(WORK_DIR.path, "math.png").toFile()
+val OUTPUT_PDF: File = Path(WORK_DIR.path, "math.pdf").toFile()
+val OUTPUT_PNG: File = Path(WORK_DIR.path, "math.png").toFile()
 
 fun latexTemplate(latex: String) = """
-    |\documentclass[border=0.50001bp,convert={convertexe={magick},outext=.png}]{standalone}
+    |\documentclass[border=0.50001bp]{standalone}
     |
     |\usepackage{xcolor}
     |
@@ -76,10 +77,24 @@ suspend fun renderLatex(latex: String): ImageResult {
                 waitFor()
                 if (exitValue() != 0) return@withContext inputReader().readText()
             }
+            ProcessBuilder(
+                "magick",
+                "-density",
+                "300",
+                OUTPUT_PDF.name,
+                OUTPUT_PNG.name,
+            ).apply {
+                directory(WORK_DIR)
+                redirectOutput(ProcessBuilder.Redirect.PIPE)
+                redirectError(ProcessBuilder.Redirect.PIPE)
+            }.start().apply {
+                waitFor()
+                if (exitValue() != 0) return@withContext inputReader().readText()
+            }
             null
         }
 
-        (if (error == null) ImageResult.Success(OUTPUT_FILE.readBytes()) else ImageResult.Error(error)).also {
+        (if (error == null) ImageResult.Success(OUTPUT_PNG.readBytes()) else ImageResult.Error(error)).also {
             WORK_DIR.listFiles()?.forEach { it.delete() }
         }
     }
